@@ -6,7 +6,7 @@
 ##
 ## Usage: 
 ## ./rbl.sh listcheck - Verify that all DNSBLS in the list are responding within a reasonable time (online)
-## ./rbl.sh details [ip] - Fetch details for all RBL entries for an IP address
+## ./rbl.sh details [ip1] [...] - Fetch details for all RBL entries for one or many IP addresses
 ## ./rbl.sh [ip1] [...] - Fetch a total count of RBL entries for many IP addresses
 
 RBL=rbl_list.txt
@@ -25,20 +25,21 @@ elif [[ $1 == "details" ]]; then
         echo "Performing detailed lookup for $2"
         RBL_C=$(cat "$RBL" | grep -v "#")
 
+		for i in "${@:2}"; do
+			W=$( echo $i | cut -d. -f1 )
+			X=$( echo $i | cut -d. -f2 )
+			Y=$( echo $i | cut -d. -f3 )
+			Z=$( echo $i | cut -d. -f4 )
 
-        W=$( echo $2 | cut -d. -f1 )
-        X=$( echo $2 | cut -d. -f2 )
-        Y=$( echo $2 | cut -d. -f3 )
-        Z=$( echo $2 | cut -d. -f4 )
+			while read -r var; do
+					CHECK=$(dig +short $Z.$Y.$X.$W.$var | grep "127.0.0." | wc -l)
 
-        while read -r var; do
-                CHECK=$(dig +short $Z.$Y.$X.$W.$var | grep "127.0.0." | wc -l)
-
-                if [[ $CHECK -gt 0 ]]; then
-                        REASON=$(dig +short $Z.$Y.$X.$W.$var TXT)
-                        echo "$2 blacklisted on $var for: $REASON"
-                fi
-        done <<< "$RBL_C"
+					if [[ $CHECK -gt 0 ]]; then
+							REASON=$(dig +short $Z.$Y.$X.$W.$var TXT)
+							echo "$i blacklisted on $var for: $REASON"
+					fi
+			done <<< "$RBL_C"
+		done
 else
         COUNT=0
         RBL_C=$(cat "$RBL" | grep -v "#")

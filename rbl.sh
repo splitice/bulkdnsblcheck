@@ -7,7 +7,7 @@
 ## Usage: 
 ## ./rbl.sh listcheck - Verify that all DNSBLS in the list are responding within a reasonable time (online)
 ## ./rbl.sh details [ip1] [...] - Fetch details for all RBL entries for one or many IP addresses
-## ./rbl.sh [ip1] [...] - Fetch a total count of RBL entries for many IP addresses
+## ./rbl.sh count [ip1] [...] - Fetch a total count of RBL entries for many IP addresses
 
 RBL=rbl_list.txt
 
@@ -40,11 +40,11 @@ elif [[ $1 == "details" ]]; then
 					fi
 			done <<< "$RBL_C"
 		done
-else
+elif [[ $1 == "count" ]]; then
         COUNT=0
         RBL_C=$(cat "$RBL" | grep -v "#")
 
-        for var in "$@"
+        for var in "${@:2}"
         do
                 W=$( echo $var | cut -d. -f1 )
                 X=$( echo $var | cut -d. -f2 )

@@ -74,4 +74,6 @@ else
 		echo "$0 listcheck - Verify that all DNSBLS in the list are responding within a reasonable time (online)"
 		echo "$0 details [ip1] [...] - Fetch details for all RBL entries for one or many IP addresses"
 		echo "$0 count [ip1] [...] - Fetch a total count of RBL entries for many IP addresses"
+		echo ""
+		echo "IP address can be either a single address or network in CIDR form"
 fi

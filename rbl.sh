@@ -11,23 +11,25 @@
 
 DIR=$(dirname $0)
 RBL=$DIR/rbl_list.txt
+ADNS_CMD=$(type -a adnshost | awk '{print $3}')
+DIG_CMD=$(type -a dig | awk '{print $3}')
 
 function process_ip {
 		if [[ $1 == */* ]]; then
-				echo "$(prips $1)"
+			echo "$(prips $1)"
 		else
-				echo "$1"
+			echo "$1"
 		fi
 }
 
 if [[ $1 == "check" ]]; then
-		dig +short +time=1 +tries=2 $2 | grep "127.0.0."
+		$DIG_CMD +short +time=1 +tries=2 $2 | grep "127.0.0."
 elif [[ $1 == "listcheck" ]]; then
 		RBL_C=$(cat "$RBL" | grep -v "#")
 
 		while read -r var; do
 				if [[ $(dig 1.1.1.1.$var +time=1 2>&1 | grep timed | wc -l) == "1" ]]; then
-						echo "$var timed out"
+					echo "$var timed out"
 				fi
 		done <<< "$RBL_C"
 elif [[ $1 == "detailscheck" ]]; then
@@ -40,11 +42,10 @@ elif [[ $1 == "detailscheck" ]]; then
 		Z=$( echo $2 | cut -d. -f4 )
 
 		while read -r var; do
-				CHECK=$(dig +short $Z.$Y.$X.$W.$var | grep "127.0.0." | wc -l)
-
+				CHECK=$($DIG_CMD +short $Z.$Y.$X.$W.$var | grep "127.0.0." | wc -l)
 				if [[ $CHECK -gt 0 ]]; then
-												REASON=$(dig +short $Z.$Y.$X.$W.$var TXT)
-												echo "$i blacklisted on $var for: $REASON"
+					REASON=$($DIG_CMD +short $Z.$Y.$X.$W.$var TXT)
+					echo "$i blacklisted on $var for: $REASON"
 				fi
 		done <<< "$RBL_C"
 elif [[ $1 == "details" ]]; then
@@ -56,7 +57,7 @@ elif [[ $1 == "details" ]]; then
 elif [[ $1 == "count" ]]; then
 		COUNT=0
 		RBL_C=$(cat "$RBL" | grep -v "#")
-
+		JOBS=""
 		for var_i in "${@:2}"
 		do
 			while read -r var; do
@@ -64,11 +65,15 @@ elif [[ $1 == "count" ]]; then
 				X=$( echo $var | cut -d. -f2 )
 				Y=$( echo $var | cut -d. -f3 )
 				Z=$( echo $var | cut -d. -f4 )
-				R=$(echo "$RBL_C" | sed -e "s/^/$Z.$Y.$X.$W./g" | parallel --max-procs 100 bash "$0" check {} | wc -l)
-				let "COUNT=R+COUNT"
+				R=$(echo "$RBL_C" | sed -e "s/^/$Z.$Y.$X.$W./g")
+				JOBS="$JOBS$R"
 			done <<< "$(process_ip $var_i)"
 		done
-		echo $COUNT
+		if [ -z $ADNS_CMD ]; then
+			echo "$JOBS" | parallel --max-procs 15 $DIG_CMD +short +time=1 +tries=2 {} | grep "127.0.0." | wc -l
+		else
+			adnshost --quiet -a $(echo "$JOBS" | tr "\\n" " ") | grep "127.0.0." | wc -l
+		fi
 else
 		echo "Usage:"
 		echo "$0 listcheck - Verify that all DNSBLS in the list are responding within a reasonable time (online)"

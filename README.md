@@ -18,3 +18,5 @@ IP address can be either a single address or network in CIDR form
  - GNU Parallel
  - prips
  - bind-utils (dig)
+ 
+ Optionally adns-utils if installed will be used for greater bulk query performance (in place of GNU Parallel and dig for some actions)
